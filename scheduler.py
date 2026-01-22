@@ -164,7 +164,7 @@ def run_with_schedule(
         run_immediately: 是否立即执行一次
     """
     scheduler = Scheduler(schedule_time=schedule_time)
-    scheduler.set_daily_task(task, run_immediately=run_immediately)
+    scheduler.set_daily_task(task, run_immediately=False)
     scheduler.run()
 
 
@@ -181,4 +181,4 @@ if __name__ == "__main__":
         print("任务完成!")
     
     print("启动测试调度器（按 Ctrl+C 退出）")
-    run_with_schedule(test_task, schedule_time="23:59", run_immediately=True)
+    run_with_schedule(test_task, schedule_time="23:59", run_immediately=False)

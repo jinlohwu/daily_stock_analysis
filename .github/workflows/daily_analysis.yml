@@ -1,17 +1,16 @@
 name: 每日股票分析
 
 on:
-  # 定时触发 - 每天北京时间 18:00 (UTC 10:00)
-  schedule:
-    - cron: '0 10 * * 1-5'  # 周一到周五，UTC 10:00 = 北京时间 18:00
-  
+#  schedule:
+#    - cron: '30 0 * * 1-5'
+
   # 手动触发
   workflow_dispatch:
     inputs:
       mode:
         description: '运行模式'
         required: true
-        default: 'full'
+        default: 'stocks-only'
         type: choice
         options:
           - full          # 完整分析（股票+大盘）
@@ -21,47 +20,53 @@ on:
 jobs:
   analyze:
     runs-on: ubuntu-latest
-    
+
     steps:
       - name: 检出代码
         uses: actions/checkout@v4
-      
+
       - name: 设置 Python 环境
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: 'pip'
-      
+
       - name: 安装依赖
         run: |
           pip install --upgrade pip
           pip install -r requirements.txt
-      
+
       - name: 创建必要目录
         run: |
           mkdir -p data logs reports
-      
+
       - name: 执行股票分析
         env:
           # Gemini AI
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || secrets.GEMINI_MODEL || 'gemini-3-flash-preview' }}
-          GEMINI_MODEL_FALLBACK: ${{ vars.GEMINI_MODEL_FALLBACK || secrets.GEMINI_MODEL_FALLBACK || 'gemini-2.5-flash' }}
-          GEMINI_REQUEST_DELAY: '3.0'  # GitHub Actions 建议增加延时
-          
+#          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+#          GEMINI_API_KEY: AIzaSyDsT0TYQPkq7w-A-CBjM0Q_1Lk9TPfwgZE
+#          GEMINI_MODEL: ${{ secrets.GEMINI_MODEL || 'gemini-3-flash-preview' }}
+#          GEMINI_MODEL_FALLBACK: ${{ secrets.GEMINI_MODEL_FALLBACK || 'gemini-2.5-flash' }}
+#          GEMINI_REQUEST_DELAY: '3.0'  # GitHub Actions 建议增加延时
+
           # 数据源 (可选)
-          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
-          
+#          TUSHARE_TOKEN: ${{ secrets.TUSHARE_TOKEN }}
+          TUSHARE_TOKEN: 6319022a16ce9050253aa8fc54dab92553d197210ce9b00a7cd7b4a4
+
           # 搜索服务
           BOCHA_API_KEYS: ${{ secrets.BOCHA_API_KEYS }}
-          TAVILY_API_KEYS: ${{ secrets.TAVILY_API_KEYS }}
+          TAVILY_API_KEYS: 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
           SERPAPI_API_KEYS: ${{ secrets.SERPAPI_API_KEYS }}
-          
+
           # OpenAI 兼容 API（备选）
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          OPENAI_BASE_URL: ${{ vars.OPENAI_BASE_URL || secrets.OPENAI_BASE_URL }}
-          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || secrets.OPENAI_MODEL }}
-          
+#          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+#          OPENAI_BASE_URL: ${{ secrets.OPENAI_BASE_URL }}
+#          OPENAI_MODEL: ${{ secrets.OPENAI_MODEL }}
+
+          OPENAI_API_KEY: sk-3d424714e0fa43fba5f57c75ee5e118d
+          OPENAI_BASE_URL: https://dashscope.aliyuncs.com/compatible-mode/v1
+          OPENAI_MODEL: qwen-plus
+
           # 通知渠道（可同时配置多个，全部推送）
           # 方式一：企业微信
           WECHAT_WEBHOOK_URL: ${{ secrets.WECHAT_WEBHOOK_URL }}
@@ -71,28 +76,31 @@ jobs:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           # 方式四：邮件（只需邮箱和授权码，SMTP自动识别）
-          EMAIL_SENDER: ${{ vars.EMAIL_SENDER || secrets.EMAIL_SENDER }}
-          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-          EMAIL_RECEIVERS: ${{ vars.EMAIL_RECEIVERS || secrets.EMAIL_RECEIVERS }}
+          EMAIL_SENDER: jinloh@qq.com
+          EMAIL_PASSWORD: lidcsqpzfkmybihh
+          EMAIL_RECEIVERS: jinloh@qq.com,275785797@qq.com
+#           EMAIL_SENDER: ${{ secrets.EMAIL_SENDER }}
+#          EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+#          EMAIL_RECEIVERS: ${{ secrets.EMAIL_RECEIVERS }}
           # 方式五：自定义 Webhook（支持钉钉、Discord、Slack、Bark等，多个用逗号分隔）
           CUSTOM_WEBHOOK_URLS: ${{ secrets.CUSTOM_WEBHOOK_URLS }}
-          CUSTOM_WEBHOOK_BEARER_TOKEN: ${{ secrets.CUSTOM_WEBHOOK_BEARER_TOKEN }}
           # 方式六：飞书文档
           FEISHU_APP_ID: ${{ secrets.FEISHU_APP_ID }}
           FEISHU_APP_SECRET: ${{ secrets.FEISHU_APP_SECRET }}
           FEISHU_FOLDER_TOKEN: ${{ secrets.FEISHU_FOLDER_TOKEN }}
 
-          
+
           # 自选股列表 (从 secrets 或使用默认值)
-          STOCK_LIST: ${{ vars.STOCK_LIST || secrets.STOCK_LIST || '600519' }}
-          
+#          STOCK_LIST: ${{ secrets.STOCK_LIST || '600519' }}
+          STOCK_LIST: 600089,688017,300352,688521,688012,301083,603083,600745,688008,603986,601869,300274，688455
+
           # 其他配置
           LOG_LEVEL: INFO
           DATA_DAYS: 60
           MAX_CONCURRENT: 3
         run: |
           # 判断运行模式
-          MODE="${{ github.event.inputs.mode || 'full' }}"
+          MODE="${{ github.event.inputs.mode || 'stocks-only' }}"
           
           echo "=========================================="
           echo "运行模式: $MODE"
@@ -109,7 +117,7 @@ jobs:
           else
             python main.py
           fi
-      
+
       - name: 上传分析报告
         uses: actions/upload-artifact@v4
         if: always()
@@ -119,7 +127,7 @@ jobs:
             reports/
             logs/
           retention-days: 30
-      
+
       - name: 显示运行结果
         if: always()
         run: |
